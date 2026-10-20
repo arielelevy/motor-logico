@@ -137,11 +137,10 @@ qué hecho o qué regla la produjo.
 
 ## ¿Por qué Prolog y no IA acá?
 
-La IA ya está en las aplicaciones que usan el motor: Lienzo y Chesstudia leen texto, interpretan
-y proponen. Este repo es la parte que **no** puede improvisar. Las aplicaciones le piden lo que un
-modelo no garantiza:
+El motor no usa un modelo de lenguaje. Lo que una aplicación le pide es justo lo que un modelo no
+garantiza:
 
-| Lo que necesitan | Cómo lo da el motor | Evidencia |
+| Lo que necesita | Cómo lo da el motor | Evidencia |
 |---|---|---|
 | La misma respuesta para la misma entrada | Evaluación de punto fijo; el resultado no depende del orden de hechos ni de reglas | `examples/logic.json` cinco veces: la misma salida byte a byte (mismo SHA-256) |
 | Saber por qué | Cada conclusión trae el árbol de reglas y hechos que la prueba | La prueba de `afectado(web)` de arriba; `test_prueba_explica_reglas_hechos_y_negaciones` |
@@ -150,11 +149,9 @@ modelo no garantiza:
 | Que la entrada no se ejecute | Las reglas son datos interpretados; el almacén se lee con `read_term` | `test_textos_que_parecen_codigo_son_datos`, `test_almacen_corrupto_o_con_codigo_se_rechaza` |
 | Costo fijo y local | Un proceso, sin red, sin tokens | ~130 ms por consulta en WSL ya arrancado; el primer arranque de WSL tarda unos segundos |
 
-El reparto queda así: la IA de cada aplicación saca hechos del material desordenado y propone
-reglas; el motor deduce lo que se sigue y lo prueba. Si el modelo afirma algo que la prueba no
-sostiene, la diferencia se ve. Por eso el botón de Lienzo se llama **Contrastar con Prolog**.
-
-El motor no reemplaza a la IA: sólo sabe lo que le dan y no maneja ambigüedad ni texto libre.
+El motor tampoco reemplaza a un modelo: sólo sabe lo que le dan y no maneja ambigüedad ni texto
+libre. Si una aplicación usa un modelo, el motor puede ser el paso que deduce y prueba a partir de
+hechos explícitos.
 
 ## Contar, calcular y saber de dónde salió
 

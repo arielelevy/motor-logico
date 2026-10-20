@@ -55,8 +55,22 @@ Documentado como decisión:
   del contrato 2 byte a byte, todas iguales.
 - Oráculo Datalog ingenuo extendido (`tests/oraculo.py`), antes de las correcciones: 300 programas
   con agregados, `op`, negación y recursión sobre valores calculados, 0 diferencias.
-- **Pendiente:** la corrida final después de las correcciones (diferencial, oráculo y latencia del
-  caso Chesstudia). Claude Code la detuvo por memoria baja en el sistema y no se relanzó. Las
-  correcciones tocan el camino del contrato 2 sólo para sacar la fusión de fuentes.
+- Corrida final después de las correcciones, una por vez y sin nada en paralelo (2026-10-20, WSL
+  con 12 CPU y 12 GB; a Windows le quedaban entre 0,3 y 2,3 GB libres):
+  - **Diferencial** contra HEAD anterior (semilla 20261020): 485 consultas (81 del contrato 1, 404
+    del 2) en 325 s, con carga 2,15 → 0,92. Hubo 1 diferencia: código 124 del lado nuevo en un caso
+    que falla con `unsafe_rule`. Repetido 5 veces: 0 diferencias, unos 670 ms ida y vuelta.
+  - **Oráculo** (semilla 20261021): 300 programas en 116 s, con carga 0,95 → 0,42 y 0,31 GB libres
+    al empezar. 0 diferencias y 1 reintento por el entorno. Dos corridas anteriores se cortaron con
+    124, en el programa 167 y después en el 41. El 167, solo, respondió 20 de 20 veces en 0,2 s.
+  - **Latencia** de `examples/chesstudia.json` (con `explain` y `explain_failures`), 30 corridas
+    con carga 0,78 → 0,81: desde `/mnt/d`, mediana 240 ms, p90 267, máximo 299; con los `.pl` en
+    ext4, mediana 170 ms, p90 187, máximo 195.
+- **Cuelgues de WSL.** Los 124 son del entorno, no del motor:
+  - El proceso no llega a correr `main`: el límite interno de 35 s nunca dispara y el `timeout` del
+    cliente corta a los 40 s.
+  - El punto cambia entre corridas y el mismo programa, solo, responde enseguida.
+  - Aparecen con poca memoria libre en Windows: uno cada ~300 a 500 procesos.
+  - Un cliente que reintente una vez ante 124 los absorbe. `tests/oraculo.py` lo hace y lo cuenta.
 
 Límites: no probado con SWI nativo de Windows; sin baseline aprobado ni PASS de aceptación global.

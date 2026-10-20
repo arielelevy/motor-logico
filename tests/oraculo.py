@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "clients" / "python"))
-from motor_logico import consultar  # noqa: E402
+from motor_logico import MotorError, consultar  # noqa: E402
 
 V = lambda n: "?" + n  # noqa: E731
 L = lambda p, *a, **k: {"pred": p, "args": list(a), **k}  # noqa: E731
@@ -230,17 +230,26 @@ def key(v):
 def main():
     seed, n = int(sys.argv[1]), int(sys.argv[2])
     r = random.Random(seed)
-    bad, cover = 0, {}
+    bad, cover, retries = 0, {}, 0
     for k in range(n):
         rules = [t for t in RULES if r.random() < 0.6]
         dom = list(range(r.randint(2, 6))) + (["x"] if r.random() < 0.3 else [])
         facts = [L("e", a, b) for a in dom for b in dom if r.random() < 0.25]
         facts += [L("w", a, r.choice([-3, 0, 1, 2, 4, 7, 2.5, "x"])) for a in dom if r.random() < 0.6]
         expected = naive(facts, rules)
-        out = consultar({"contract": 3, "domain": "logic", "facts": facts,
-                         "rules": [{"id": i, "head": h, "body": b} for i, h, b in rules],
-                         "queries": [L(p, *[V(f"A{i}") for i in range(a)]) for p, a in PREDS.items()],
-                         "limits": {"max_results": 10000}})
+        query = {"contract": 3, "domain": "logic", "facts": facts,
+                 "rules": [{"id": i, "head": h, "body": b} for i, h, b in rules],
+                 "queries": [L(p, *[V(f"A{i}") for i in range(a)]) for p, a in PREDS.items()],
+                 "limits": {"max_results": 10000}}
+        try:
+            out = consultar(query)
+        except MotorError as e:
+            # WSL a veces no arranca swipl y el `timeout` del cliente corta con 124: se reintenta
+            # una vez y se cuenta. Un time_limit del motor sale con código 2, no con 124.
+            if "124" not in e.message:
+                raise
+            retries += 1
+            out = consultar(query)
         for (p, a), ans in zip(PREDS.items(), out["answers"]):
             got = {tuple(res["bindings"][f"A{i}"] for i in range(a)) for res in ans["results"]}
             exp = expected.get(p, set())
@@ -248,7 +257,7 @@ def main():
             if got != exp:
                 bad += 1
                 print("DIFF", k, p, sorted(got - exp, key=str)[:5], sorted(exp - got, key=str)[:5], [x[0] for x in rules])
-    print(f"programas={n} diferencias={bad}")
+    print(f"programas={n} diferencias={bad} reintentos_por_entorno={retries}")
     print("programas con resultados por predicado:", dict(sorted(cover.items())))
 
 
