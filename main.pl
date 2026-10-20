@@ -4,7 +4,7 @@
 :- use_module(logic).
 
 % Protocolo independiente: un JSON por stdin, un JSON por stdout. Nunca recibe goals.
-% Contrato 1: dominio learning, sin persistencia (Lienzo). Contrato 2: dominio logic.
+% Contrato 1: dominio learning, sin persistencia (Lienzo). Contratos 2 y 3: dominio logic.
 % Un fallo sale con código 2 y {"error", "code"} por stderr, nunca como respuesta vacía.
 % La respuesta se serializa completa antes de escribirla: un error nunca deja stdout a medias.
 main :-
@@ -37,8 +37,9 @@ dispatch(1, Input, Output) :- !,
     call_with_time_limit(2, call_with_inference_limit(learning:infer(Input, Conclusions), 1000000, Limit)),
     (Limit == inference_limit_exceeded -> throw(motor_error(inference_limit, "Se excedió el límite de inferencias")) ; true),
     Output = _{contract:1, domain:learning, rules:1, authority:observation_only, conclusions:Conclusions}.
-dispatch(2, Input, Output) :- !, logic_request(Input, Output).
-dispatch(_, _, _) :- throw(motor_error(unsupported_contract, "Contrato no soportado; versiones disponibles: 1, 2")).
+dispatch(2, Input, Output) :- !, logic_request(2, Input, Output).
+dispatch(3, Input, Output) :- !, logic_request(3, Input, Output).
+dispatch(_, _, _) :- throw(motor_error(unsupported_contract, "Contrato no soportado; versiones disponibles: 1, 2, 3")).
 
 fail_with(E) :-
     error_info(E, Code, Message0),

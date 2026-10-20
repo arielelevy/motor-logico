@@ -1,0 +1,538 @@
+{
+ "contract": 3,
+ "domain": "logic",
+ "explain": true,
+ "explain_failures": true,
+ "facts": [
+  {
+   "pred": "concepto",
+   "args": [
+    "clavada"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "horquilla"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "ataque_doble"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "descubierto"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "rayos_x"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "peon_pasado"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "peon_pasado_protegido"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "peon_pasado_exterior"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "torre_en_septima"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "columna_abierta"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "pieza_atrapada"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "rey_expuesto"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "mate_del_pasillo"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "alfiles_de_distinto_color"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "sobrecarga"
+   ]
+  },
+  {
+   "pred": "concepto",
+   "args": [
+    "desviacion"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "horquilla",
+    "ataque_doble"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "rayos_x",
+    "clavada"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "descubierto",
+    "ataque_doble"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "sobrecarga",
+    "ataque_doble"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "desviacion",
+    "sobrecarga"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "pieza_atrapada",
+    "ataque_doble"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "mate_del_pasillo",
+    "rey_expuesto"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "peon_pasado_protegido",
+    "peon_pasado"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "peon_pasado_exterior",
+    "peon_pasado"
+   ]
+  },
+  {
+   "pred": "prerequisito",
+   "args": [
+    "torre_en_septima",
+    "columna_abierta"
+   ]
+  },
+  {
+   "pred": "sostenido",
+   "args": [
+    "clavada"
+   ],
+   "source": "modelo"
+  },
+  {
+   "pred": "sostenido",
+   "args": [
+    "peon_pasado"
+   ],
+   "source": "modelo"
+  },
+  {
+   "pred": "sostenido",
+   "args": [
+    "columna_abierta"
+   ],
+   "source": "prior"
+  },
+  {
+   "pred": "sostenido",
+   "args": [
+    "rey_expuesto"
+   ],
+   "source": "modelo"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "horquilla",
+    1
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "horquilla",
+    2
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "horquilla",
+    3
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "clavada",
+    1
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "ataque_doble",
+    1
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "ataque_doble",
+    2
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "ataque_doble",
+    3
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "fallo",
+   "args": [
+    "ataque_doble",
+    4
+   ],
+   "source": "reglas"
+  },
+  {
+   "pred": "plan",
+   "args": [
+    "desviacion"
+   ],
+   "source": "modelo"
+  },
+  {
+   "pred": "plan",
+   "args": [
+    "rayos_x"
+   ],
+   "source": "modelo"
+  }
+ ],
+ "rules": [
+  {
+   "id": "req-directo",
+   "head": {
+    "pred": "requiere",
+    "args": [
+     "?C",
+     "?P"
+    ]
+   },
+   "body": [
+    {
+     "pred": "prerequisito",
+     "args": [
+      "?C",
+      "?P"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "req-transitivo",
+   "head": {
+    "pred": "requiere",
+    "args": [
+     "?C",
+     "?Q"
+    ]
+   },
+   "body": [
+    {
+     "pred": "prerequisito",
+     "args": [
+      "?C",
+      "?P"
+     ]
+    },
+    {
+     "pred": "requiere",
+     "args": [
+      "?P",
+      "?Q"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tiene-falta",
+   "head": {
+    "pred": "tiene_falta",
+    "args": [
+     "?C"
+    ]
+   },
+   "body": [
+    {
+     "pred": "requiere",
+     "args": [
+      "?C",
+      "?P"
+     ]
+    },
+    {
+     "pred": "sostenido",
+     "args": [
+      "?P"
+     ],
+     "not": true
+    }
+   ]
+  },
+  {
+   "id": "raiz",
+   "head": {
+    "pred": "raiz",
+    "args": [
+     "?C",
+     "?P"
+    ]
+   },
+   "body": [
+    {
+     "pred": "requiere",
+     "args": [
+      "?C",
+      "?P"
+     ]
+    },
+    {
+     "pred": "sostenido",
+     "args": [
+      "?P"
+     ],
+     "not": true
+    },
+    {
+     "pred": "tiene_falta",
+     "args": [
+      "?P"
+     ],
+     "not": true
+    }
+   ]
+  },
+  {
+   "id": "bloqueado",
+   "head": {
+    "pred": "bloqueado",
+    "args": [
+     "?C"
+    ]
+   },
+   "body": [
+    {
+     "pred": "raiz",
+     "args": [
+      "?C",
+      "?_"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "frente",
+   "head": {
+    "pred": "frente",
+    "args": [
+     "?C"
+    ]
+   },
+   "body": [
+    {
+     "pred": "concepto",
+     "args": [
+      "?C"
+     ]
+    },
+    {
+     "pred": "sostenido",
+     "args": [
+      "?C"
+     ],
+     "not": true
+    },
+    {
+     "pred": "bloqueado",
+     "args": [
+      "?C"
+     ],
+     "not": true
+    }
+   ]
+  },
+  {
+   "id": "veces",
+   "head": {
+    "pred": "veces",
+    "args": [
+     "?C",
+     "?N"
+    ]
+   },
+   "body": [
+    {
+     "pred": "concepto",
+     "args": [
+      "?C"
+     ]
+    },
+    {
+     "agg": "count",
+     "pred": "fallo",
+     "args": [
+      "?C",
+      "?_"
+     ],
+     "as": "?N"
+    }
+   ]
+  },
+  {
+   "id": "repite",
+   "head": {
+    "pred": "repite",
+    "args": [
+     "?C"
+    ]
+   },
+   "body": [
+    {
+     "pred": "veces",
+     "args": [
+      "?C",
+      "?N"
+     ]
+    },
+    {
+     "cmp": ">=",
+     "args": [
+      "?N",
+      3
+     ]
+    }
+   ]
+  }
+ ],
+ "constraints": [
+  {
+   "id": "plan-bloqueado",
+   "message": "El plan propone un concepto con un prerrequisito sin sostener",
+   "body": [
+    {
+     "pred": "plan",
+     "args": [
+      "?C"
+     ]
+    },
+    {
+     "pred": "bloqueado",
+     "args": [
+      "?C"
+     ]
+    }
+   ]
+  }
+ ],
+ "queries": [
+  {
+   "pred": "frente",
+   "args": [
+    "?C"
+   ]
+  },
+  {
+   "pred": "bloqueado",
+   "args": [
+    "?C"
+   ]
+  },
+  {
+   "pred": "repite",
+   "args": [
+    "?C"
+   ]
+  },
+  {
+   "pred": "bloqueado",
+   "args": [
+    "desviacion"
+   ]
+  },
+  {
+   "pred": "frente",
+   "args": [
+    "horquilla"
+   ]
+  }
+ ]
+}

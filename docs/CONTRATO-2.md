@@ -1,5 +1,8 @@
 # Contrato 2 · dominio logic
 
+> Sigue vigente y sin cambios. Para agregados, aritmética, fuentes de hechos y huella del
+> programa, usá el [contrato 3](CONTRATO-3.md), que convive con este.
+
 Una consulta JSON en stdin; una respuesta en stdout. Éxito: código 0. Error: código 2 y
 `{"error": "<mensaje>", "code": "<código>"}` en stderr, sin nada en stdout.
 

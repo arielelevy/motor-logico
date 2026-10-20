@@ -1,4 +1,4 @@
-:- module(store, [store_name/2, store_load/2, store_save/2, with_store_lock/2]).
+:- module(store, [store_name/2, store_load/3, store_save/3, with_store_lock/2]).
 :- use_module(library(filesex)).
 :- use_module(library(process)).
 
@@ -33,45 +33,49 @@ name_code(C, true) :- memberchk(C, `._-`).
 
 store_path(Name, Path) :- data_dir(Dir), atomic_list_concat([Dir, /, Name, '.pl'], Path).
 
-% store(Revision, Hechos, Reglas, Restricciones); un almacén inexistente es revisión 0 vacía.
-store_load(Name, Store) :-
+% store(Revision, Hechos, Reglas, Restricciones); un almacén inexistente es revisión 0 vacía,
+% de formato `none`. Formato 1 (contrato 2): fact(Pred, Args). Formato 2 (contrato 3):
+% fact(Pred, Args, Fuentes). Los hechos vuelven tal como están en el archivo.
+store_load(Name, Format, Store) :-
     store_path(Name, Path),
     (   exists_file(Path)
     ->  catch(setup_call_cleanup(open(Path, read, S, [encoding(utf8)]), read_terms(S, Terms), close(S)),
               E, (message_to_string(E, M), err(corrupt_store, "No se pudo leer el almacén ~s: ~s", [Name, M]))),
-        terms_store(Name, Terms, Store)
-    ;   Store = store(0, [], [], [])
+        terms_store(Name, Terms, Format, Store)
+    ;   Format = none, Store = store(0, [], [], [])
     ).
 read_terms(S, Terms) :-
     read_term(S, T, [syntax_errors(error)]),
     (T == end_of_file -> Terms = [] ; Terms = [T|Rest], read_terms(S, Rest)).
 
-terms_store(Name, [store_meta(1, Rev)|Terms], store(Rev, Facts, Rules, Constraints)) :-
-    integer(Rev), Rev >= 0, ground(Terms), !,
-    partition_terms(Terms, Facts0, Rules, Constraints), sort(Facts0, Facts),
+terms_store(Name, [store_meta(Format, Rev)|Terms], Format, store(Rev, Facts, Rules, Constraints)) :-
+    memberchk(Format, [1, 2]), integer(Rev), Rev >= 0, ground(Terms), !,
+    partition_terms(Format, Terms, Facts0, Rules, Constraints), sort(Facts0, Facts),
     (   length(Terms, N), length(Facts0, NF), length(Rules, NR), length(Constraints, NC), N =:= NF + NR + NC
     ->  true
     ;   err(corrupt_store, "El almacén ~s tiene términos desconocidos", [Name])
     ).
-terms_store(Name, _, _) :- err(corrupt_store, "El almacén ~s no tiene store_meta(1, Revisión) válido", [Name]).
-partition_terms(Terms, Facts, Rules, Constraints) :-
-    include([T]>>(T = fact(_, _)), Terms, Facts),
+terms_store(Name, _, _, _) :- err(corrupt_store, "El almacén ~s no tiene store_meta(Formato, Revisión) válido", [Name]).
+partition_terms(Format, Terms, Facts, Rules, Constraints) :-
+    (Format == 1 -> include([T]>>(T = fact(_, _)), Terms, Facts) ; include([T]>>(T = fact(_, _, _)), Terms, Facts)),
     include([T]>>(T = rule(_, _, _)), Terms, Rules),
     include([T]>>(T = constraint(_, _, _)), Terms, Constraints).
 
-store_save(Name, store(Rev, Facts, Rules, Constraints)) :-
+% Los hechos llegan como fact(Pred, Args, Fuentes); el formato 1 no tiene fuentes.
+store_save(Name, Format, store(Rev, Facts0, Rules, Constraints)) :-
+    (Format == 1 -> maplist([fact(P, A, _), fact(P, A)]>>true, Facts0, Facts) ; Facts = Facts0),
     store_path(Name, Path), file_directory_name(Path, Dir), make_directory_path(Dir),
     current_prolog_flag(pid, Pid), format(atom(Tmp), "~w.~w.tmp", [Path, Pid]),
     catch(( setup_call_cleanup(open(Tmp, write, S, [encoding(utf8)]),
                 ( format(S, "% motor-logico · almacén ~s · sólo datos, no consultar como código~n", [Name]),
-                  write_fact(S, store_meta(1, Rev)),
+                  write_fact(S, store_meta(Format, Rev)),
                   forall(member(T, Facts), write_fact(S, T)),
                   forall(member(T, Rules), write_fact(S, T)),
                   forall(member(T, Constraints), write_fact(S, T)) ),
                 close(S)),
             % Releer antes de reemplazar: nunca se publica un almacén que no se pueda volver a leer.
             setup_call_cleanup(open(Tmp, read, R, [encoding(utf8)]), read_terms(R, Back), close(R)),
-            append([store_meta(1, Rev)|Facts], Rules, T0), append(T0, Constraints, Expected),
+            append([store_meta(Format, Rev)|Facts], Rules, T0), append(T0, Constraints, Expected),
             (Back == Expected -> true ; err(corrupt_store, "El almacén ~s no se releyó igual; no se guardó", [Name])),
             durable(Tmp), rename_file(Tmp, Path), durable(Dir) ),
           E, (catch(delete_file(Tmp), _, true), throw(E))).

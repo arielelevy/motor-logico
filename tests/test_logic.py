@@ -134,7 +134,7 @@ class Rechazos(unittest.TestCase):
 
     def test_contrato_desconocido(self):
         with self.assertRaises(MotorError) as ctx:
-            consultar({"contract": 3})
+            consultar({"contract": 4})
         self.assertEqual(ctx.exception.code, "unsupported_contract")
 
 

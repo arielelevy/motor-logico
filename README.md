@@ -7,12 +7,13 @@ se deduce y, para cada conclusión, la cadena de pasos que la prueba. Es un moto
 cualquier repo consulta por un proceso: entra un JSON, sale un JSON. Nunca ejecuta código ni goals
 del cliente.
 
-`v0.1.1` · dos contratos:
+`v0.2.0` · tres contratos:
 
 | Contrato | Dominio | Para qué | Persistencia |
 |---|---|---|---|
 | `1` · reglas `1` | `learning` | Segunda opinión sobre creencias y aprendizaje de Lienzo | No |
 | `2` | `logic` | Razonamiento general: Datalog con recursión, negación, comparaciones, restricciones y pruebas | Opcional, por `store` |
+| `3` | `logic` | El 2 más agregados (`count`, `sum`, `min`, `max`), aritmética, fuentes de cada hecho y huella del programa | Opcional, por `store` |
 
 ## La idea: una segunda opinión, no una dependencia
 
@@ -39,8 +40,9 @@ funcionando, sólo que sin ese razonamiento.
 </tr>
 </table>
 
-**Hoy:** Lienzo usa el contrato 1 desde un botón de consulta manual. El contrato 2 está disponible
-para cualquier repo. **Pendiente:** reglas de ajedrez para Chesstudia (no hereda las de aprendizaje).
+**Hoy:** Lienzo usa el contrato 1 desde un botón de consulta manual. Los contratos 2 y 3 están
+disponibles para cualquier repo. **Pendiente:** el adaptador de Chesstudia, que va en su repo y usará
+el contrato 3 con reglas propias (no hereda las de aprendizaje).
 
 ## Aprender con un ejemplo
 
@@ -154,6 +156,43 @@ sostiene, la diferencia se ve. Por eso el botón de Lienzo se llama **Contrastar
 
 El motor no reemplaza a la IA: sólo sabe lo que le dan y no maneja ambigüedad ni texto libre.
 
+## Contar, calcular y saber de dónde salió
+
+El contrato 3 agrega lo que hace falta para razonar sobre un alumno. Está pensado para Chesstudia y
+sirve a cualquier repo. [examples/chesstudia.json](examples/chesstudia.json) arma un caso con los
+14 motivos tácticos, más sobrecarga y desviación, y un grafo de prerrequisitos inventado de ejemplo.
+
+**Contar.** Un agregado en el cuerpo cuenta, suma o busca el mínimo o el máximo:
+
+```json
+{"id": "veces", "head": {"pred": "veces", "args": ["?C", "?N"]},
+ "body": [{"pred": "concepto", "args": ["?C"]},
+          {"agg": "count", "pred": "fallo", "args": ["?C", "?_"], "as": "?N"}]}
+```
+
+Se lee "`?N` es la cantidad de fallos en `?C`". Como `?C` viene de `concepto`, un concepto sin fallos da
+`0`. Con otra regla, `veces(?C, ?N)` y `?N >= 3`, sale "ya fallaste tres veces esto".
+
+**Calcular.** `{"op": "-", "args": ["?Hoy", "?Dia"], "as": "?Dias"}` da los días desde un acierto.
+
+**Saber de dónde salió.** Cada hecho puede traer `"source"`: `motor`, `reglas`, `fragmento`, `modelo`,
+`prior`. Cada respuesta devuelve `sources`, las fuentes de todo lo que la sostiene, y cada hoja de la
+prueba dice la suya.
+
+**Repetir una decisión.** La salida trae `engine.version` y `program_hash`, la huella del programa
+evaluado. Una decisión guardada con esos dos datos se puede reconocer después, sin el motor.
+
+En el ejemplo, `bloqueado(desviacion)` se prueba con la cadena entera: desviación se apoya en
+sobrecarga, que se apoya en ataque doble, que todavía no está sostenido. Con `explain_failures`,
+`frente(horquilla)` responde por qué no: la regla `frente` falla en `no bloqueado(horquilla)`.
+
+Las reglas con agregados u `op` no pueden ser recursivas, y por eso toda consulta sigue terminando.
+Detalle: [contrato 3](docs/CONTRATO-3.md).
+
+> **Para Chesstudia:** una conclusión del motor lógico es `COMPUTED`, una función de los hechos y
+> las reglas que recibió. El motor nunca evalúa una jugada: las evaluaciones sólo salen de Stockfish
+> y pueden entrar como hechos con `"source": "motor"`.
+
 ## Un contrato pequeño
 
 <table>
@@ -179,7 +218,7 @@ un error con código, nunca una lista vacía que parezca un éxito.
 </tr>
 </table>
 
-| Contrato 2: entra | Vuelve |
+| Contratos 2 y 3: entra | Vuelve |
 |---|---|
 | `facts`: hechos `{pred, args}` sólo para esta consulta | `answers`: por query, `holds`, `count` y `bindings` |
 | `rules`: `{id, head, body}` | `proof` por respuesta con `explain: true` |
@@ -189,7 +228,8 @@ un error con código, nunca una lista vacía que parezca un éxito.
 
 Se rechazan con un código claro las reglas inseguras (variables sin ligar), la recursión a través
 de una negación y los campos desconocidos.
-Detalle completo: [contrato 2](docs/CONTRATO-2.md) · [contrato 1](docs/CONTRATO.md).
+Detalle completo: [contrato 3](docs/CONTRATO-3.md) · [contrato 2](docs/CONTRATO-2.md) ·
+[contrato 1](docs/CONTRATO.md).
 
 ### Persistencia
 
@@ -220,7 +260,7 @@ Se comparte el protocolo: leer el JSON, despachar por contrato, aplicar límites
 Cada dominio trae sus reglas. Las de aprendizaje de Lienzo están fijas en `learning.pl`. Un dominio
 futuro, como ajedrez para Chesstudia, traerá las suyas con sus pruebas; no hereda las de aprendizaje.
 
-El contrato 2 no necesita un módulo propio: sus reglas llegan en cada consulta o desde un almacén.
+Los contratos 2 y 3 no necesitan un módulo propio: sus reglas llegan en cada consulta o desde un almacén.
 
 </td>
 <td width="50%" valign="middle">
@@ -236,7 +276,7 @@ El contrato 2 no necesita un módulo propio: sus reglas llegan en cada consulta 
 |---|---|
 | `main.pl` | Protocolo, despacho por contrato, límites y errores |
 | `learning.pl` | Reglas fijas del contrato 1: veredicto humano, respaldo, cadenas caídas, vigencia, contexto |
-| `logic.pl` | Contrato 2: validación, estratificación, evaluación semi-ingenua, pruebas, restricciones |
+| `logic.pl` | Contratos 2 y 3: validación, estratificación, evaluación semi-ingenua, agregados, pruebas, fuentes, restricciones |
 | `store.pl` | Almacenes: nombres seguros, lectura validada, escritura atómica, candado |
 
 Un cambio de contrato es una versión nueva; el contrato 1 se mantiene para Lienzo.
@@ -264,7 +304,7 @@ Desde Python, sin dependencias, con [clients/python/motor_logico.py](clients/pyt
 from motor_logico import consultar, MotorError
 
 r = consultar({
-    "contract": 2, "domain": "logic",
+    "contract": 3, "domain": "logic",
     "facts": [{"pred": "padre", "args": ["ana", "beto"]}, {"pred": "padre", "args": ["beto", "carla"]}],
     "rules": [
         {"id": "a1", "head": {"pred": "ancestro", "args": ["?X", "?Y"]},
@@ -298,7 +338,7 @@ diferencias; no valida ni modifica creencias. Actualizar Lienzo no instala ni ac
 
 ## Límites
 
-| | Contrato 1 | Contrato 2 |
+| | Contrato 1 | Contratos 2 y 3 |
 |---|---|---|
 | Tiempo de inferencia | 2 s | 5 s por defecto, `limits.seconds` hasta 30 |
 | Inferencias | 1 millón | 10 millones por segundo de límite |
@@ -309,8 +349,8 @@ diferencias; no valida ni modifica creencias. Actualizar Lienzo no instala ni ac
 El cliente Python rechaza entradas de más de 8 MiB y corta el proceso a los 40 s. Un error sale
 con código `2` y `{"error", "code"}` por stderr, nunca como una respuesta vacía exitosa.
 
-Es Datalog: sin símbolos de función ni aritmética que cree valores nuevos, por eso toda consulta
-termina. `1` y `1.0` son iguales en `cmp` pero distintos al unificar. Un texto que empieza con
+Es Datalog: sin símbolos de función, y la aritmética del contrato 3 nunca entra en una recursión,
+por eso toda consulta termina. `1` y `1.0` son iguales en `cmp` pero distintos al unificar. Un texto que empieza con
 `?` se escribe `??`.
 
 ## Verificar y mantener
@@ -320,7 +360,15 @@ python -m unittest discover -s tests -v
 ```
 
 Las pruebas no importan Lienzo: protocolo del contrato 1, razonamiento, rechazos y persistencia del
-contrato 2 (incluidas escrituras concurrentes). La integración con Lienzo se prueba en su repo.
+contrato 2 (incluidas escrituras concurrentes) y agregados, `op`, fuentes, huella y fallos del
+contrato 3. La integración con Lienzo se prueba en su repo.
+
+Dos herramientas más, fuera de `unittest` porque lanzan cientos de procesos:
+
+```sh
+python tests/oraculo.py 1 300                       # Datalog ingenuo en Python contra el motor
+python tests/diferencial.py <versión-anterior> 1 300 # contratos 1 y 2, byte a byte
+```
 
 Las tres infografías son SVG estáticos en temas claro y oscuro, con rótulos dentro de la figura.
 Sus fuentes están en `docs/figuras/`; para regenerarlas, Node y la skill Anatomy existente
@@ -330,4 +378,5 @@ Sus fuentes están en `docs/figuras/`; para regenerarlas, Node y la skill Anatom
 node docs/build.mjs --check
 ```
 
-Ver [revisión y validación](code-review-2026-10-19.md).
+Ver revisión y validación: [2026-10-20](code-review-2026-10-20.md) (contrato 3) ·
+[2026-10-19](code-review-2026-10-19.md).

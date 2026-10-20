@@ -1,7 +1,7 @@
 """Cliente mínimo del motor lógico, sólo biblioteca estándar. Copiable a cualquier repo.
 
     from motor_logico import consultar
-    respuesta = consultar({"contract": 2, "domain": "logic", "facts": [...], "queries": [...]})
+    respuesta = consultar({"contract": 3, "domain": "logic", "facts": [...], "queries": [...]})
 
 En Windows ejecuta SWI-Prolog dentro de WSL (distro MOTOR_LOGICO_WSL_DISTRO, por defecto
 Ubuntu); en Linux y macOS usa `swipl` del PATH. No instala nada.
