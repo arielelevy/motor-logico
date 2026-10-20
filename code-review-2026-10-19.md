@@ -28,13 +28,18 @@ Revisión independiente (subagente, con ejecuciones reales). Corregido y con pru
 Documentado como decisión: las restricciones informan y no bloquean escrituras; un timeout del
 cliente deja la escritura indeterminada (reconciliar con `expect_revision`).
 
-Pendiente (bajo): `json_read_dict` acepta basura después del JSON; la escritura de la respuesta y
-la lectura del almacén quedan fuera del límite de tiempo (las cubre el timeout del cliente); sin
-fsync antes del rename. Se dejaron para no tocar `main.pl`, congelado para Lienzo.
+v0.1.1 (main.pl cambia; learning.pl no):
+
+- Texto después del JSON es `invalid_json`; espacios y saltos de línea finales se aceptan.
+- Límite total de 35 s por proceso que cubre lectura, almacén, evaluación y serialización. La
+  respuesta se serializa completa antes de escribirla: un error nunca deja stdout a medias.
+- `store_save` hace fsync del temporal antes del rename y de la carpeta después (`sync <ruta>` de
+  coreutils; si no existe, se omite). Error nuevo: `store_io`.
+- Diferencial contrato 1 con el main nuevo: 60/60 iguales.
 
 ## Evidencia
 
-- `python -m unittest discover -s tests`: 31 OK (SWI-Prolog 9.0.4 en Ubuntu WSL).
+- `python -m unittest discover -s tests`: 32 OK (SWI-Prolog 9.0.4 en Ubuntu WSL).
 - Oráculo Datalog ingenuo en Python: 260 programas aleatorios (recursión lineal, no lineal y
   mutua, negación, comparaciones), 0 diferencias.
 - Concurrencia: 6 escritores sin `expect_revision` → revisiones 1..6 sin pérdidas; 16 con

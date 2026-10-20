@@ -1,5 +1,6 @@
 :- module(store, [store_name/2, store_load/2, store_save/2, with_store_lock/2]).
 :- use_module(library(filesex)).
+:- use_module(library(process)).
 
 % Almacenes del contrato 2: un archivo de términos Prolog por nombre, sólo datos.
 % Se leen con read_term (nunca consult) y se reemplazan con rename atómico.
@@ -72,8 +73,17 @@ store_save(Name, store(Rev, Facts, Rules, Constraints)) :-
             setup_call_cleanup(open(Tmp, read, R, [encoding(utf8)]), read_terms(R, Back), close(R)),
             append([store_meta(1, Rev)|Facts], Rules, T0), append(T0, Constraints, Expected),
             (Back == Expected -> true ; err(corrupt_store, "El almacén ~s no se releyó igual; no se guardó", [Name])),
-            rename_file(Tmp, Path) ),
+            durable(Tmp), rename_file(Tmp, Path), durable(Dir) ),
           E, (catch(delete_file(Tmp), _, true), throw(E))).
+% fsync del archivo antes del rename y de la carpeta después, así un corte de energía no deja
+% un almacén vacío. SWI no expone fsync: `sync <ruta>` de coreutils lo hace para esa ruta.
+durable(Path) :-
+    (   absolute_file_name(path(sync), Sync, [access(execute), file_errors(fail)])
+    ->  process_create(Sync, [Path], [stdin(null), stdout(null), stderr(null), process(P)]),
+        process_wait(P, Status),
+        (Status == exit(0) -> true ; err(store_io, "No se pudo sincronizar ~w con el disco", [Path]))
+    ;   true
+    ).
 write_fact(S, T) :- write_term(S, T, [quoted(true), ignore_ops(true), fullstop(true), nl(true)]).
 
 % Candado entre procesos: un directorio (mkdir es atómico) con owner(Pid, Token) adentro.

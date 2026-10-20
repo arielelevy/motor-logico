@@ -88,7 +88,7 @@ Cada violación: `{constraint, message, count, truncated, results}` con `binding
 `invalid_json`, `invalid_request`, `unsupported_contract`, `unsupported_domain`, `invalid_fact`,
 `invalid_rule`, `invalid_constraint`, `invalid_literal`, `invalid_term`, `invalid_limit`,
 `unsafe_rule`, `unstratified`, `duplicate_id`, `too_large`, `store_required`, `invalid_store`,
-`corrupt_store`, `store_busy`, `conflict`, `time_limit`, `inference_limit`, `resource_limit`.
+`corrupt_store`, `store_busy`, `store_io`, `conflict`, `time_limit`, `inference_limit`, `resource_limit`.
 
 ## Almacenes
 

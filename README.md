@@ -6,7 +6,7 @@ Motor SWI-Prolog que cualquier repo puede consultar por un proceso: entra un JSO
 Deduce con reglas declaradas como datos, explica cada conclusión con su prueba y, si se lo pide,
 guarda hechos y reglas en almacenes con nombre. Nunca ejecuta código ni goals del cliente.
 
-`v0.1.0` · dos contratos:
+`v0.1.1` · dos contratos:
 
 | Contrato | Dominio | Para qué | Persistencia |
 |---|---|---|---|

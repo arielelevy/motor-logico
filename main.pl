@@ -6,17 +6,30 @@
 % Protocolo independiente: un JSON por stdin, un JSON por stdout. Nunca recibe goals.
 % Contrato 1: dominio learning, sin persistencia (Lienzo). Contrato 2: dominio logic.
 % Un fallo sale con código 2 y {"error", "code"} por stderr, nunca como respuesta vacía.
+% La respuesta se serializa completa antes de escribirla: un error nunca deja stdout a medias.
 main :-
     forall(member(S, [user_input, user_output, user_error]), set_stream(S, encoding(utf8))),
-    catch((run(Output) -> true ; throw(motor_error(invalid_snapshot, "La consulta no pudo resolverse"))),
+    catch(call_with_time_limit(35, (
+              (run(Output) -> true ; throw(motor_error(invalid_snapshot, "La consulta no pudo resolverse"))),
+              with_output_to(string(Text), json_write_dict(current_output, Output, [width(0)])))),
           E, fail_with(E)),
-    json_write_dict(current_output, Output, [width(0)]), nl.
+    write(Text), nl.
 
 run(Output) :-
     json_read_dict(user_input, Input, [value_string_as(string)]),
+    only_whitespace_left(user_input),
     (is_dict(Input), get_dict(contract, Input, C) -> true
     ; throw(motor_error(invalid_request, "La consulta debe ser un objeto con contract"))),
     dispatch(C, Input, Output).
+
+only_whitespace_left(In) :-
+    peek_char(In, C),
+    (   C == end_of_file
+    ->  true
+    ;   char_type(C, space)
+    ->  get_char(In, _), only_whitespace_left(In)
+    ;   throw(motor_error(invalid_json, "Hay texto después del JSON; se espera una sola consulta"))
+    ).
 
 dispatch(1, Input, Output) :- !,
     (get_dict(domain, Input, "learning") -> true

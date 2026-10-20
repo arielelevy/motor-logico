@@ -9,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def query(data):
+    return raw_query(json.dumps(data))
+
+
+def raw_query(text):
     engine = ROOT / "main.pl"
     if os.name == "nt":
         path = "/mnt/" + engine.drive[0].lower() + engine.as_posix()[len(engine.drive):]
@@ -17,7 +21,7 @@ def query(data):
         path = str(engine)
         command = ["swipl"]
     return subprocess.run(command + ["-q", "-f", "none", "-s", path, "-g", "main", "-t", "halt"],
-                          input=json.dumps(data), capture_output=True, text=True, timeout=12,
+                          input=text, capture_output=True, text=True, timeout=12,
                           creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
 
 
@@ -53,6 +57,15 @@ class Protocol(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         conclusion = json.loads(result.stdout)["conclusions"][0]
         self.assertEqual((conclusion["status"], conclusion["chains"]), ("respaldo_caido", [["b", "d", "h"]]))
+
+    def test_trailing_whitespace_ok_trailing_text_is_error(self):
+        empty = {"contract": 1, "domain": "learning", "now": 0, "context": {}, "nodes": [], "edges": [], "beliefs": []}
+        for suffix, code in [("\n", 0), ("  \r\n\t\n", 0), ("\n{}", 2), (" basura", 2)]:
+            result = raw_query(json.dumps(empty) + suffix)
+            self.assertEqual(result.returncode, code, (suffix, result.stderr))
+            if code:
+                self.assertEqual(result.stdout, "")
+                self.assertEqual(json.loads(result.stderr)["code"], "invalid_json")
 
     def test_edge_to_missing_node_is_error(self):
         result = query({"contract": 1, "domain": "learning", "now": 0, "context": {}, "beliefs": [],
