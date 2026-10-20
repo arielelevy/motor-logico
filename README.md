@@ -15,10 +15,31 @@ guarda hechos y reglas en almacenes con nombre. Nunca ejecuta código ni goals d
 
 ## Una consulta, sin depender del motor
 
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Cómo leer la figura**
+
+- **Fichero con lámpara verde:** la aplicación (por ejemplo Lienzo) con sus propios datos.
+  La lámpara queda encendida aunque el motor no esté.
+- **Estación PROLOG:** el motor, en otro repo. Sus peines son las reglas; no abre los cajones
+  del fichero.
+- **Bandeja de atrás:** la consulta de ida, un JSON con hechos (y, en el contrato 2, reglas).
+- **Bandeja de adelante, ficha ámbar:** lo que vuelve: conclusiones con la prueba que las respalda.
+
+**La idea:** el motor es una segunda opinión, no una dependencia. Si se retira la estación, el
+fichero sigue funcionando igual.
+
+</td>
+<td width="50%" valign="middle">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/prolog-dark.svg">
-  <img alt="Fichero autónomo con lámpara verde junto a una estación Prolog separada: una bandeja lleva la consulta y otra devuelve las conclusiones; el fichero sigue funcionando sin la estación" src="docs/img/prolog-light.svg">
+  <img width="100%" alt="Fichero autónomo con lámpara verde junto a una estación Prolog separada: una bandeja lleva la consulta y otra devuelve las conclusiones; el fichero sigue funcionando sin la estación" src="docs/img/prolog-light.svg">
 </picture>
+</td>
+</tr>
+</table>
 
 La aplicación conserva sus datos y su funcionamiento normal. Cuando necesita deducir o contrastar
 algo, consulta al motor y recibe conclusiones con su explicación. Si falta Prolog o la consulta
@@ -84,10 +105,30 @@ Cada consulta es un proceso aislado; no hay servidor, HTTP ni MCP que mantener.
 
 ## Un contrato pequeño
 
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Cómo leer la figura**
+
+- **Bandeja izquierda, ficha blanca:** el JSON de entrada: hechos, reglas, restricciones y queries.
+- **Peines fijos:** el intérprete del motor. Leen la ficha como datos; lo que traiga escrito no
+  los reconfigura ni se ejecuta.
+- **Bandeja derecha, ficha verde:** el JSON de salida: respuestas, pruebas y violaciones.
+- **Lámpara verde arriba:** la consulta terminó bien. Si no, sale un error con código, nunca una
+  respuesta vacía que parezca éxito.
+
+**La idea:** entra una ficha y sale otra. Nada de lo que viaja en ella se convierte en código.
+
+</td>
+<td width="50%" valign="middle">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/contrato-dark.svg">
-  <img alt="Lectora de fichas con bandeja de entrada, peines fijos de reglas y bandeja de respuesta: los datos atraviesan la máquina sin convertirse en código ejecutable" src="docs/img/contrato-light.svg">
+  <img width="100%" alt="Lectora de fichas con bandeja de entrada, peines fijos de reglas y bandeja de respuesta: los datos atraviesan la máquina sin convertirse en código ejecutable" src="docs/img/contrato-light.svg">
 </picture>
+</td>
+</tr>
+</table>
 
 Un JSON por entrada estándar, un JSON por salida estándar. Las reglas viajan como datos y el motor
 las interpreta contra sus propios hechos: un texto como `"halt, shell('rm')"` es sólo un valor.
@@ -121,10 +162,30 @@ El almacén se lee como datos (`read_term`), nunca se consulta como código.
 
 ## Reglas separadas del cliente
 
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Cómo leer la figura**
+
+- **Banco y contactos ámbar:** lo que se comparte: `main.pl` con el protocolo, los límites y
+  los errores.
+- **Cartucho asentado, placa verde:** `learning.pl`, las reglas fijas del contrato 1 que usa Lienzo.
+- **Zócalo vacío:** el lugar de un dominio futuro, como ajedrez para Chesstudia, que traerá sus
+  propias reglas y pruebas.
+
+**La idea:** compartir el banco no es compartir las reglas. El contrato 2 no ocupa zócalo: sus
+reglas llegan en cada consulta o desde un almacén.
+
+</td>
+<td width="50%" valign="middle">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/reglas-dark.svg">
-  <img alt="Banco de cartuchos con un módulo de aprendizaje cargado y otro zócalo vacío: el protocolo se comparte, pero cada dominio necesita sus propias reglas" src="docs/img/reglas-light.svg">
+  <img width="100%" alt="Banco de cartuchos con un módulo de aprendizaje cargado y otro zócalo vacío: el protocolo se comparte, pero cada dominio necesita sus propias reglas" src="docs/img/reglas-light.svg">
 </picture>
+</td>
+</tr>
+</table>
 
 | Archivo | Responsabilidad |
 |---|---|
