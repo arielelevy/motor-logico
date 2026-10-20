@@ -1,0 +1,31 @@
+{
+  "contract": 2,
+  "domain": "logic",
+  "explain": true,
+  "facts": [
+    {"pred": "depende", "args": ["api", "auth"]},
+    {"pred": "depende", "args": ["auth", "db"]},
+    {"pred": "depende", "args": ["web", "api"]},
+    {"pred": "caido", "args": ["db"]},
+    {"pred": "servicio", "args": ["web"]},
+    {"pred": "servicio", "args": ["reportes"]}
+  ],
+  "rules": [
+    {"id": "directa", "head": {"pred": "requiere", "args": ["?A", "?B"]},
+     "body": [{"pred": "depende", "args": ["?A", "?B"]}]},
+    {"id": "transitiva", "head": {"pred": "requiere", "args": ["?A", "?C"]},
+     "body": [{"pred": "depende", "args": ["?A", "?B"]}, {"pred": "requiere", "args": ["?B", "?C"]}]},
+    {"id": "afectado", "head": {"pred": "afectado", "args": ["?S"]},
+     "body": [{"pred": "requiere", "args": ["?S", "?X"]}, {"pred": "caido", "args": ["?X"]}]},
+    {"id": "sano", "head": {"pred": "sano", "args": ["?S"]},
+     "body": [{"pred": "servicio", "args": ["?S"]}, {"pred": "afectado", "args": ["?S"], "not": true}]}
+  ],
+  "constraints": [
+    {"id": "servicio-afectado", "message": "Un servicio publicado depende de algo caído",
+     "body": [{"pred": "servicio", "args": ["?S"]}, {"pred": "afectado", "args": ["?S"]}]}
+  ],
+  "queries": [
+    {"pred": "afectado", "args": ["?S"]},
+    {"pred": "sano", "args": ["?S"]}
+  ]
+}

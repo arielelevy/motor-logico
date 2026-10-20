@@ -1,0 +1,15 @@
+{
+  "contract": 1,
+  "domain": "learning",
+  "now": 100,
+  "context": {"tipo_trabajo": "bugfix"},
+  "nodes": [
+    {"id": "b", "kind": "decision", "state": "vigente"},
+    {"id": "e", "kind": "evidencia", "state": null}
+  ],
+  "edges": [{"from": "b", "to": "e", "relation": "apoya"}],
+  "beliefs": [{
+    "id": "b", "state": "vigente", "verdict": "validada", "approved_by": "persona:Ariel",
+    "evidence": "e", "until": 200, "required": {"tipo_trabajo": "bugfix"}
+  }]
+}
