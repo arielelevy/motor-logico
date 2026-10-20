@@ -29,7 +29,12 @@ out.push(S({ x: -82, y: -12, w: 32, d: 22, r: 0.6 }, 63, 1, "hi", { className: a
 for (const y of [-31, 27]) out.push(k.dotsSvg([k.iso([-91, y, 63], P), k.iso([-41, y, 63], P)], { size: 0.45 }));
 
 export function build() {
-  return write("reglas", { width, height,
+  return write("reglas", { width, height, P,
+    notes: [
+      { at: [-66, -1, 64], dx: -70, dy: -50, title: "learning.pl", text: "reglas del contrato 1" },
+      { at: [66, -1, 11], dx: 140, dy: -70, title: "main.pl", text: "protocolo compartido" },
+      { at: [66, 49, 18], dx: 90, dy: 60, title: "Zócalo libre", text: "próximo dominio" },
+    ],
     label: "Un banco con dos zócalos: el cartucho de aprendizaje está asentado y tiene una placa verde; otro zócalo permanece vacío para un dominio futuro. Compartir el banco no significa compartir las reglas.",
     body: out,
     card: { fig: "Fig 3", title: "Un motor, reglas por dominio", hint: "El banco se comparte · las reglas se separan", readout: "Hoy: learning",

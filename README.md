@@ -2,9 +2,10 @@
 
 **Hechos de entrada. Reglas explícitas. Conclusiones con respaldo.**
 
-Motor SWI-Prolog que cualquier repo puede consultar por un proceso: entra un JSON, sale un JSON.
-Deduce con reglas declaradas como datos, explica cada conclusión con su prueba y, si se lo pide,
-guarda hechos y reglas en almacenes con nombre. Nunca ejecuta código ni goals del cliente.
+Le das al motor lo que sabés (hechos) y cómo se razona sobre eso (reglas). Te devuelve todo lo que
+se deduce y, para cada conclusión, la cadena de pasos que la prueba. Es un motor SWI-Prolog que
+cualquier repo consulta por un proceso: entra un JSON, sale un JSON. Nunca ejecuta código ni goals
+del cliente.
 
 `v0.1.1` · dos contratos:
 
@@ -13,23 +14,20 @@ guarda hechos y reglas en almacenes con nombre. Nunca ejecuta código ni goals d
 | `1` · reglas `1` | `learning` | Segunda opinión sobre creencias y aprendizaje de Lienzo | No |
 | `2` | `logic` | Razonamiento general: Datalog con recursión, negación, comparaciones, restricciones y pruebas | Opcional, por `store` |
 
-## Una consulta, sin depender del motor
+## La idea: una segunda opinión, no una dependencia
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-**Cómo leer la figura**
+Tu aplicación guarda sus datos y funciona sola. Cuando necesita deducir algo, como qué servicios
+caen si se cae la base, o si una creencia tiene respaldo, arma una consulta y se la manda al motor.
 
-- **Fichero con lámpara verde:** la aplicación (por ejemplo Lienzo) con sus propios datos.
-  La lámpara queda encendida aunque el motor no esté.
-- **Estación PROLOG:** el motor, en otro repo. Sus peines son las reglas; no abre los cajones
-  del fichero.
-- **Bandeja de atrás:** la consulta de ida, un JSON con hechos (y, en el contrato 2, reglas).
-- **Bandeja de adelante, ficha ámbar:** lo que vuelve: conclusiones con la prueba que las respalda.
+El motor vive en su propio repo. Recibe una copia de los hechos, razona y devuelve conclusiones
+con su prueba. No guarda nada de la aplicación ni le cambia sus datos.
 
-**La idea:** el motor es una segunda opinión, no una dependencia. Si se retira la estación, el
-fichero sigue funcionando igual.
+Si falta Prolog o la consulta falla, la aplicación recibe un error explícito (código `2`) y sigue
+funcionando, sólo que sin ese razonamiento.
 
 </td>
 <td width="50%" valign="middle">
@@ -41,28 +39,203 @@ fichero sigue funcionando igual.
 </tr>
 </table>
 
-La aplicación conserva sus datos y su funcionamiento normal. Cuando necesita deducir o contrastar
-algo, consulta al motor y recibe conclusiones con su explicación. Si falta Prolog o la consulta
-falla, recibe un error explícito (código `2`) y sigue sin ese razonamiento.
-
 **Hoy:** Lienzo usa el contrato 1 desde un botón de consulta manual. El contrato 2 está disponible
 para cualquier repo. **Pendiente:** reglas de ajedrez para Chesstudia (no hereda las de aprendizaje).
 
-## Empezar en dos minutos
+## Aprender con un ejemplo
 
-Requiere SWI-Prolog ya instalado (probado con 9.0.4). En Windows se usa el de Ubuntu WSL.
+[examples/logic.json](examples/logic.json) describe cuatro servicios y pregunta cuáles quedan
+afectados cuando se cae la base de datos. Lo recorremos en cuatro pasos.
+
+### 1. Hechos: lo que sabés
+
+Un hecho es un predicado con argumentos. `depende(web, api)` se lee "web depende de api".
+
+```json
+{"pred": "depende", "args": ["web", "api"]}
+{"pred": "depende", "args": ["api", "auth"]}
+{"pred": "depende", "args": ["auth", "db"]}
+{"pred": "caido",   "args": ["db"]}
+{"pred": "servicio", "args": ["web"]}
+{"pred": "servicio", "args": ["reportes"]}
+```
+
+```text
+web ──► api ──► auth ──► db (caída)          reportes (no depende de nadie)
+```
+
+### 2. Reglas: cómo se razona
+
+Una regla dice "si se cumple todo el cuerpo, vale la cabeza". Las palabras con `?` son variables:
+el motor prueba todos los valores que encajan.
+
+| Regla | En palabras |
+|---|---|
+| `directa` | Si `?A` depende de `?B`, entonces `?A` requiere `?B`. |
+| `transitiva` | Si `?A` depende de `?B` y `?B` requiere `?C`, entonces `?A` requiere `?C`. |
+| `afectado` | Si `?S` requiere algo que está caído, `?S` está afectado. |
+| `sano` | Si `?S` es un servicio y **no** está afectado, está sano. |
+
+```json
+{"id": "transitiva",
+ "head": {"pred": "requiere", "args": ["?A", "?C"]},
+ "body": [{"pred": "depende", "args": ["?A", "?B"]},
+          {"pred": "requiere", "args": ["?B", "?C"]}]}
+```
+
+`transitiva` se usa a sí misma: así el motor sigue la cadena entera, sin importar cuán larga sea.
+`sano` usa una negación (`"not": true`); el motor calcula primero todos los afectados y recién
+después decide quién está sano.
+
+### 3. Preguntas y restricciones
+
+Las `queries` son lo que querés saber: `afectado(?S)` y `sano(?S)`. Una restricción describe algo
+que **no** debería pasar; acá, que un servicio publicado esté afectado.
+
+### 4. La respuesta
 
 ```sh
 swipl -q -f none -s main.pl -g main -t halt < examples/logic.json
 ```
 
+| Pregunta | Resultado |
+|---|---|
+| `afectado(?S)` | `api`, `auth`, `web` |
+| `sano(?S)` | `reportes` |
+| restricción `servicio-afectado` | violada por `web`: `consistent` es `false` |
+
+Con `"explain": true`, cada resultado trae su prueba. La de `web` se lee de abajo hacia arriba:
+
+```text
+afectado(web)                       regla afectado
+├─ requiere(web, db)                regla transitiva
+│  ├─ depende(web, api)             hecho
+│  └─ requiere(api, db)             regla transitiva
+│     ├─ depende(api, auth)         hecho
+│     └─ requiere(auth, db)         regla directa
+│        └─ depende(auth, db)       hecho
+└─ caido(db)                        hecho
+```
+
+Cada conclusión termina en hechos que vos diste. Si una respuesta te sorprende, la prueba muestra
+qué hecho o qué regla la produjo.
+
+### Vocabulario
+
+| Término | Qué es |
+|---|---|
+| Hecho | Algo que se da por cierto: `caido(db)` |
+| Regla | Cabeza que vale cuando se cumple todo el cuerpo |
+| Variable | `?X`; toma cualquier valor que encaje. `?_` es anónima |
+| Negación | Literal con `"not": true`: vale si el hecho **no** se puede deducir |
+| Comparación | `{"cmp": "<", "args": ["?E", 18]}` con `= != < <= > >=` |
+| Restricción | Cuerpo que no debería cumplirse; si se cumple, aparece en `violations` |
+| Prueba | Árbol de reglas y hechos que respalda una conclusión |
+| Almacén | Hechos y reglas guardados con nombre para consultas siguientes |
+
+## Un contrato pequeño
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+La aplicación y el motor se hablan con un solo mensaje de ida y uno de vuelta: un JSON por entrada
+estándar y otro por salida estándar.
+
+Las reglas viajan como **datos**. El motor las interpreta con su propio evaluador; no las convierte
+en código. Un texto como `"halt, shell('rm')"` es sólo un valor más.
+
+Si algo no cuadra (un campo desconocido, una regla insegura, un límite excedido) la respuesta es
+un error con código, nunca una lista vacía que parezca un éxito.
+
+</td>
+<td width="50%" valign="middle">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/contrato-dark.svg">
+  <img width="100%" alt="Lectora de fichas con bandeja de entrada, peines fijos de reglas y bandeja de respuesta: los datos atraviesan la máquina sin convertirse en código ejecutable" src="docs/img/contrato-light.svg">
+</picture>
+</td>
+</tr>
+</table>
+
+| Contrato 2: entra | Vuelve |
+|---|---|
+| `facts`: hechos `{pred, args}` sólo para esta consulta | `answers`: por query, `holds`, `count` y `bindings` |
+| `rules`: `{id, head, body}` | `proof` por respuesta con `explain: true` |
+| `constraints`: cuerpos que no deberían cumplirse | `consistent` y `violations` con sus ligaduras |
+| `queries`: patrones a responder | `stats`: hechos, derivados, estratos, iteraciones |
+| `store`, `assert`, `retract`, `expect_revision`, `export` | `store`: nombre, revisión y conteos |
+
+Se rechazan con un código claro las reglas inseguras (variables sin ligar), la recursión a través
+de una negación y los campos desconocidos.
+Detalle completo: [contrato 2](docs/CONTRATO-2.md) · [contrato 1](docs/CONTRATO.md).
+
+### Persistencia
+
+Sin `store`, cada consulta empieza de cero. Con `store`, el motor recuerda:
+
+```json
+{"contract": 2, "domain": "logic", "store": "inventario",
+ "assert": {"facts": [{"pred": "depende", "args": ["api", "db"]}], "rules": []}}
+```
+
+Un `store` es un archivo `<nombre>.pl` de términos Prolog legible a mano. `assert` y `retract` se
+aplican, se evalúa el programa resultante y **recién entonces** se guarda: si algo falla, el
+almacén queda como estaba. Cada cambio sube la `revision`; `expect_revision` rechaza con
+`conflict` si otro proceso escribió antes. Las escrituras concurrentes se serializan con un
+candado; las lecturas no esperan. Los hechos de `facts` combinan con el almacén sin guardarse.
+El almacén se lee como datos (`read_term`), nunca se consulta como código.
+
+## Un motor, reglas por dominio
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+El motor separa lo que se comparte de lo que es propio de cada dominio.
+
+Se comparte el protocolo: leer el JSON, despachar por contrato, aplicar límites y devolver errores.
+
+Cada dominio trae sus reglas. Las de aprendizaje de Lienzo están fijas en `learning.pl`. Un dominio
+futuro, como ajedrez para Chesstudia, traerá las suyas con sus pruebas; no hereda las de aprendizaje.
+
+El contrato 2 no necesita un módulo propio: sus reglas llegan en cada consulta o desde un almacén.
+
+</td>
+<td width="50%" valign="middle">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/reglas-dark.svg">
+  <img width="100%" alt="Banco de cartuchos con un módulo de aprendizaje cargado y otro zócalo vacío: el protocolo se comparte, pero cada dominio necesita sus propias reglas" src="docs/img/reglas-light.svg">
+</picture>
+</td>
+</tr>
+</table>
+
+| Archivo | Responsabilidad |
+|---|---|
+| `main.pl` | Protocolo, despacho por contrato, límites y errores |
+| `learning.pl` | Reglas fijas del contrato 1: veredicto humano, respaldo, cadenas caídas, vigencia, contexto |
+| `logic.pl` | Contrato 2: validación, estratificación, evaluación semi-ingenua, pruebas, restricciones |
+| `store.pl` | Almacenes: nombres seguros, lectura validada, escritura atómica, candado |
+
+Un cambio de contrato es una versión nueva; el contrato 1 se mantiene para Lienzo.
+
+## Usarlo desde otro repo
+
+Requiere SWI-Prolog ya instalado (probado con 9.0.4). En Windows se usa el de Ubuntu WSL:
+
 ```powershell
 Get-Content -Raw examples/logic.json | wsl -d Ubuntu -- swipl -q -f none -s /mnt/d/Apps/motor-logico/main.pl -g main -t halt
 ```
 
-[examples/logic.json](examples/logic.json) declara qué servicio depende de cuál y cuál está caído.
-El motor responde que `api`, `auth` y `web` están afectados (con la cadena de reglas que lo prueba),
-que `reportes` está sano por negación, y que la restricción `servicio-afectado` se viola para `web`.
+El motor no se instala ni se importa: se ejecuta. Tres formas, de la más simple a la más integrada:
+
+1. **Copiar el cliente.** `clients/python/motor_logico.py` es un archivo; copialo y apuntalo con
+   `MOTOR_LOGICO_ENGINE=/ruta/a/main.pl`. Arma el comando (WSL en Windows), traduce rutas y
+   convierte cualquier fallo en `MotorError(code, message)`.
+2. **Proceso directo** desde cualquier lenguaje: escribí el JSON en stdin de
+   `swipl -q -f none -s main.pl -g main -t halt`, leé stdout; código distinto de 0 es error.
+3. **Un adaptador propio**, como el de Lienzo, que valida versiones y limita entrada y concurrencia.
 
 Desde Python, sin dependencias, con [clients/python/motor_logico.py](clients/python/motor_logico.py):
 
@@ -83,17 +256,6 @@ r = consultar({
 [x["bindings"]["Q"] for x in r["answers"][0]["results"]]  # ['beto', 'carla']
 ```
 
-## Usarlo desde otro repo
-
-El motor no se instala ni se importa: se ejecuta. Tres formas, de la más simple a la más integrada:
-
-1. **Copiar el cliente.** `clients/python/motor_logico.py` es un archivo; copialo y apuntalo con
-   `MOTOR_LOGICO_ENGINE=/ruta/a/main.pl`. Arma el comando (WSL en Windows), traduce rutas y
-   convierte cualquier fallo en `MotorError(code, message)`.
-2. **Proceso directo** desde cualquier lenguaje: escribí el JSON en stdin de
-   `swipl -q -f none -s main.pl -g main -t halt`, leé stdout; código distinto de 0 es error.
-3. **Un adaptador propio**, como el de Lienzo, que valida versiones y limita entrada y concurrencia.
-
 Cloná el repo una sola vez (por ejemplo en `D:/Apps/motor-logico`) y apuntá cada proyecto ahí.
 Cada consulta es un proceso aislado; no hay servidor, HTTP ni MCP que mantener.
 
@@ -102,100 +264,6 @@ Cada consulta es un proceso aislado; no hay servidor, HTTP ni MCP que mantener.
 | `MOTOR_LOGICO_ENGINE` | Ruta a `main.pl` para el cliente Python |
 | `MOTOR_LOGICO_DATA` | Carpeta de almacenes (por defecto `data/` junto a `main.pl`, ignorada por Git) |
 | `MOTOR_LOGICO_WSL_DISTRO` | Distro de WSL en Windows (por defecto `Ubuntu`) |
-
-## Un contrato pequeño
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**Cómo leer la figura**
-
-- **Bandeja izquierda, ficha blanca:** el JSON de entrada: hechos, reglas, restricciones y queries.
-- **Peines fijos:** el intérprete del motor. Leen la ficha como datos; lo que traiga escrito no
-  los reconfigura ni se ejecuta.
-- **Bandeja derecha, ficha verde:** el JSON de salida: respuestas, pruebas y violaciones.
-- **Lámpara verde arriba:** la consulta terminó bien. Si no, sale un error con código, nunca una
-  respuesta vacía que parezca éxito.
-
-**La idea:** entra una ficha y sale otra. Nada de lo que viaja en ella se convierte en código.
-
-</td>
-<td width="50%" valign="middle">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/contrato-dark.svg">
-  <img width="100%" alt="Lectora de fichas con bandeja de entrada, peines fijos de reglas y bandeja de respuesta: los datos atraviesan la máquina sin convertirse en código ejecutable" src="docs/img/contrato-light.svg">
-</picture>
-</td>
-</tr>
-</table>
-
-Un JSON por entrada estándar, un JSON por salida estándar. Las reglas viajan como datos y el motor
-las interpreta contra sus propios hechos: un texto como `"halt, shell('rm')"` es sólo un valor.
-
-| Contrato 2: entra | Vuelve |
-|---|---|
-| `facts`: hechos `{pred, args}` sólo para esta consulta | `answers`: por query, `holds`, `count` y `bindings` |
-| `rules`: `{id, head, body}`; `?X` es variable, `?_` anónima | `proof` por respuesta con `explain: true` |
-| `constraints`: cuerpos que no deberían cumplirse | `consistent` y `violations` con sus ligaduras |
-| `queries`: patrones a responder | `stats`: hechos, derivados, estratos, iteraciones |
-| `store`, `assert`, `retract`, `expect_revision`, `export` | `store`: nombre, revisión y conteos |
-
-El cuerpo admite literales positivos, negados (`"not": true`) y comparaciones
-(`{"cmp": "<", "args": ["?E", 18]}` con `= != < <= > >=`). Se rechazan con un código claro las
-reglas inseguras (variables sin ligar), la recursión a través de una negación y los campos
-desconocidos. Detalle completo: [contrato 2](docs/CONTRATO-2.md) · [contrato 1](docs/CONTRATO.md).
-
-### Persistencia
-
-```json
-{"contract": 2, "domain": "logic", "store": "inventario",
- "assert": {"facts": [{"pred": "depende", "args": ["api", "db"]}], "rules": []}}
-```
-
-Un `store` es un archivo `<nombre>.pl` de términos Prolog legible a mano. `assert` y `retract` se
-aplican, se evalúa el programa resultante y **recién entonces** se guarda: si algo falla, el
-almacén queda como estaba. Cada cambio sube la `revision`; `expect_revision` rechaza con
-`conflict` si otro proceso escribió antes. Las escrituras concurrentes se serializan con un
-candado; las lecturas no esperan. Los hechos de `facts` combinan con el almacén sin guardarse.
-El almacén se lee como datos (`read_term`), nunca se consulta como código.
-
-## Reglas separadas del cliente
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**Cómo leer la figura**
-
-- **Banco y contactos ámbar:** lo que se comparte: `main.pl` con el protocolo, los límites y
-  los errores.
-- **Cartucho asentado, placa verde:** `learning.pl`, las reglas fijas del contrato 1 que usa Lienzo.
-- **Zócalo vacío:** el lugar de un dominio futuro, como ajedrez para Chesstudia, que traerá sus
-  propias reglas y pruebas.
-
-**La idea:** compartir el banco no es compartir las reglas. El contrato 2 no ocupa zócalo: sus
-reglas llegan en cada consulta o desde un almacén.
-
-</td>
-<td width="50%" valign="middle">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/reglas-dark.svg">
-  <img width="100%" alt="Banco de cartuchos con un módulo de aprendizaje cargado y otro zócalo vacío: el protocolo se comparte, pero cada dominio necesita sus propias reglas" src="docs/img/reglas-light.svg">
-</picture>
-</td>
-</tr>
-</table>
-
-| Archivo | Responsabilidad |
-|---|---|
-| `main.pl` | Protocolo, despacho por contrato, límites y errores |
-| `learning.pl` | Reglas fijas del contrato 1: veredicto humano, respaldo, cadenas caídas, vigencia, contexto |
-| `logic.pl` | Contrato 2: validación, estratificación, evaluación semi-ingenua, pruebas, restricciones |
-| `store.pl` | Almacenes: nombres seguros, lectura validada, escritura atómica, candado |
-
-Las reglas de aprendizaje no son reglas de ajedrez: un dominio futuro trae sus propias reglas y
-pruebas. Un cambio de contrato es una versión nueva; el contrato 1 se mantiene para Lienzo.
 
 ## Conectar Lienzo
 
@@ -233,8 +301,9 @@ python -m unittest discover -s tests -v
 Las pruebas no importan Lienzo: protocolo del contrato 1, razonamiento, rechazos y persistencia del
 contrato 2 (incluidas escrituras concurrentes). La integración con Lienzo se prueba en su repo.
 
-Las tres infografías son SVG estáticos en temas claro y oscuro. Sus fuentes están en
-`docs/figuras/`; para regenerarlas, Node y la skill Anatomy existente (`ANATOMY_DIR` indica dónde):
+Las tres infografías son SVG estáticos en temas claro y oscuro, con rótulos dentro de la figura.
+Sus fuentes están en `docs/figuras/`; para regenerarlas, Node y la skill Anatomy existente
+(`ANATOMY_DIR` indica dónde):
 
 ```sh
 node docs/build.mjs --check

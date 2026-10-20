@@ -84,7 +84,13 @@ function tray(y, z, returned) {
 
 export function build() {
   return write("prolog", {
-    width: WIDTH, height: HEIGHT,
+    width: WIDTH, height: HEIGHT, P,
+    notes: [
+      { at: [-123, -7, 102], dx: -50, dy: -14, title: "Tu aplicación", text: "guarda sus datos" },
+      { at: [91, 8, 81], dx: 60, dy: -80, title: "Motor Prolog", text: "en su propio repo" },
+      { at: [85, 50, 5], dx: 130, dy: 50, title: "Ida: la consulta", text: "JSON con hechos" },
+      { at: [-8, 77, 5], dx: -90, dy: 60, title: "Vuelta: la respuesta", text: "conclusiones + prueba" },
+    ],
     label: "Un fichero con su lámpara verde conserva las creencias y el aprendizaje. A su lado, un bastidor Prolog independiente recibe fichas por una bandeja y devuelve una copia con conclusiones por otra. Retirar el bastidor no detiene el fichero.",
     body: [cabinet(), station(), tray(43, 0, false), tray(70, 0, true)],
     card: {

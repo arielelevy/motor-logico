@@ -34,7 +34,13 @@ out.push(S({ x: -18, y: -14, w: 36, d: 28, r: 1 }, 88, 1.5, "lo"));
 out.push(S({ x: -6, y: -6, w: 12, d: 12, r: 1 }, 89.5, 2, "hi", { className: acento.verde }));
 
 export function build() {
-  return write("contrato", { width, height,
+  return write("contrato", { width, height, P,
+    notes: [
+      { at: [-92, 0, 14], dx: -70, dy: -40, title: "Entra un JSON", text: "hechos y reglas" },
+      { at: [0, 0, 91.5], dx: 90, dy: -60, title: "Luz verde", text: "respuesta válida" },
+      { at: [32, 30, 60], dx: 150, dy: -10, title: "Reglas fijas", text: "no ejecuta código" },
+      { at: [94, 0, 15], dx: 80, dy: 50, title: "Sale un JSON", text: "respuestas y pruebas" },
+    ],
     label: "Una lectora de fichas recibe datos por su bandeja izquierda, los contrasta con peines fijos y entrega una respuesta por la derecha. Las fichas son datos: no programan la máquina.",
     body: out,
     card: { fig: "Fig 2", title: "Datos de ida y de vuelta", hint: "JSON entra · JSON sale", readout: "Contrato 1 · reglas 1",
